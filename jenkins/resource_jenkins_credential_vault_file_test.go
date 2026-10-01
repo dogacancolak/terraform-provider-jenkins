@@ -23,10 +23,13 @@ func TestAccJenkinsCredentialVaultFile_basic(t *testing.T) {
 				resource jenkins_credential_vault_file foo {
 				  name = "test-vault-file"
 				  path = "secret/data/foo"
+				  file_name = "secret.txt"
 				}`,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("jenkins_credential_vault_file.foo", "id", "/test-vault-file"),
 					resource.TestCheckResourceAttr("jenkins_credential_vault_file.foo", "use_key", "false"),
+					resource.TestCheckResourceAttr("jenkins_credential_vault_file.foo", "file_name", "secret.txt"),
+					resource.TestCheckResourceAttr("jenkins_credential_vault_file.foo", "engine_version", "2"),
 					testAccCheckJenkinsCredentialVaultFileExists("jenkins_credential_vault_file.foo", &cred),
 				),
 			},
@@ -37,12 +40,14 @@ func TestAccJenkinsCredentialVaultFile_basic(t *testing.T) {
 				  name = "test-vault-file"
 				  description = "new-description"
 				  path = "secret/data/foo"
+				  file_name = "renamed.txt"
 				  use_key = true
 				  vault_key = "private-key"
 				}`,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckJenkinsCredentialVaultFileExists("jenkins_credential_vault_file.foo", &cred),
 					resource.TestCheckResourceAttr("jenkins_credential_vault_file.foo", "description", "new-description"),
+					resource.TestCheckResourceAttr("jenkins_credential_vault_file.foo", "file_name", "renamed.txt"),
 					resource.TestCheckResourceAttr("jenkins_credential_vault_file.foo", "use_key", "true"),
 					resource.TestCheckResourceAttr("jenkins_credential_vault_file.foo", "vault_key", "private-key"),
 				),

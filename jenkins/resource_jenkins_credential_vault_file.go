@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -55,6 +56,7 @@ type credentialVaultFileResource struct {
 
 // Ensure the implementation satisfies the desired interfaces.
 var _ resource.ResourceWithConfigure = &credentialVaultFileResource{}
+var _ resource.ResourceWithValidateConfig = &credentialVaultFileResource{}
 
 func newCredentialVaultFileResource() resource.Resource {
 	return &credentialVaultFileResource{
@@ -92,18 +94,17 @@ Manages a Vault secret file credential within Jenkins. The file content is resol
 				Required:            true,
 			},
 			"engine_version": schema.Int64Attribute{
-				MarkdownDescription: "The KV engine version of the Vault secrets engine. Must be either `1` or `2`. Defaults to `2`.",
+				MarkdownDescription: "The KV engine version of the Vault secrets engine. Must be either `1` or `2`. Defaults to `2`, which pins the credential rather than inheriting the Jenkins global or folder Vault configuration.",
 				Optional:            true,
 				Computed:            true,
 				Default:             int64default.StaticInt64(2),
+				Validators: []validator.Int64{
+					int64validator.OneOf(1, 2),
+				},
 			},
 			"file_name": schema.StringAttribute{
-				MarkdownDescription: "The file name presented to the job for the resolved secret. If not set, the Vault plugin generates a random name.",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				MarkdownDescription: "The file name presented to the job for the resolved secret.",
+				Required:            true,
 			},
 			"use_key": schema.BoolAttribute{
 				MarkdownDescription: "When `true`, the file content is the value of `vault_key` within the secret. When `false`, the file content is the whole secret serialized as JSON. Defaults to `false`.",
@@ -118,6 +119,30 @@ Manages a Vault secret file credential within Jenkins. The file content is resol
 				Default:             stringdefault.StaticString(""),
 			},
 		}),
+	}
+}
+
+// ValidateConfig enforces the cross-field constraint the Vault plugin applies at job
+// runtime: the keyed lookup throws if the key is empty, so reject it at plan time.
+func (r *credentialVaultFileResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var data credentialVaultFileResourceModel
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if data.UseKey.IsUnknown() || data.VaultKey.IsUnknown() {
+		return
+	}
+
+	if data.UseKey.ValueBool() && data.VaultKey.ValueString() == "" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("vault_key"),
+			"Missing Vault Key",
+			"vault_key must be set to a non-empty value when use_key is true, "+
+				"otherwise the Vault plugin cannot resolve the file content.",
+		)
 	}
 }
 
@@ -176,15 +201,6 @@ func (r *credentialVaultFileResource) Create(ctx context.Context, req resource.C
 	// Convert from the API data model to the Terraform data model
 	// and set any unknown attribute values.
 	data.ID = types.StringValue(generateCredentialID(data.Folder.ValueString(), cred.ID))
-
-	// The Vault plugin generates a random file name if none is supplied; read it back so
-	// state reflects the value Jenkins persisted rather than an empty string.
-	if data.FileName.IsUnknown() || data.FileName.ValueString() == "" {
-		stored := VaultFileCredentials{}
-		if err := cm.GetSingle(ctx, data.Domain.ValueString(), data.Name.ValueString(), &stored); err == nil {
-			data.FileName = types.StringValue(stored.FileName)
-		}
-	}
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
