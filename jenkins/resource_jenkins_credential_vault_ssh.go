@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -89,10 +91,13 @@ Manages a Vault SSH username with private key credential within Jenkins. The use
 				Required:            true,
 			},
 			"engine_version": schema.Int64Attribute{
-				MarkdownDescription: "The KV engine version of the Vault secrets engine. Must be either `1` or `2`. Defaults to `2`.",
+				MarkdownDescription: "The KV engine version of the Vault secrets engine. Must be either `1` or `2`. Defaults to `2`, which pins the credential rather than inheriting the Jenkins global or folder Vault configuration.",
 				Optional:            true,
 				Computed:            true,
 				Default:             int64default.StaticInt64(2),
+				Validators: []validator.Int64{
+					int64validator.OneOf(1, 2),
+				},
 			},
 			"username_key": schema.StringAttribute{
 				MarkdownDescription: "The key within the Vault secret to read the username from. Defaults to `username`.",
