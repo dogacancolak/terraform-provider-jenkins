@@ -19,6 +19,7 @@ Manages a Vault secret file credential within Jenkins. The file content is resol
 resource "jenkins_credential_vault_file" "example" {
   name      = "example-vault-file"
   path      = "secret/data/example"
+  file_name = "private-key.pem"
   use_key   = true
   vault_key = "private-key"
 }
@@ -29,6 +30,7 @@ resource "jenkins_credential_vault_file" "example" {
 
 ### Required
 
+- `file_name` (String) The file name presented to the job for the resolved secret.
 - `name` (String) The name of the resource being created. This maps to the ID property within Jenkins, and cannot be changed once set.
 - `path` (String) The Vault path of the secret to read.
 
@@ -36,8 +38,7 @@ resource "jenkins_credential_vault_file" "example" {
 
 - `description` (String) A human readable description of the credentials being stored.
 - `domain` (String) The domain store to place the credentials into. If not set will default to the global credentials store.
-- `engine_version` (Number) The KV engine version of the Vault secrets engine. Must be either `1` or `2`. Defaults to `2`.
-- `file_name` (String) The file name presented to the job for the resolved secret. If not set, the Vault plugin generates a random name.
+- `engine_version` (Number) The KV engine version of the Vault secrets engine. Must be either `1` or `2`. Defaults to `2`, which pins the credential rather than inheriting the Jenkins global or folder Vault configuration.
 - `folder` (String) The folder namespace to store the resource in. If not set will default to global Jenkins.
 - `namespace` (String) The Vault namespace to read the secret from.
 - `prefix_path` (String) The Vault mount prefix path to prepend to `path`.

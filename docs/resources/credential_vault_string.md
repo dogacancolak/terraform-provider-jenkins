@@ -35,7 +35,7 @@ resource "jenkins_credential_vault_string" "example" {
 
 - `description` (String) A human readable description of the credentials being stored.
 - `domain` (String) The domain store to place the credentials into. If not set will default to the global credentials store.
-- `engine_version` (Number) The KV engine version of the Vault secrets engine. Must be either `1` or `2`. Defaults to `2`.
+- `engine_version` (Number) The KV engine version of the Vault secrets engine. Must be either `1` or `2`. Defaults to `2`, which pins the credential rather than inheriting the Jenkins global or folder Vault configuration.
 - `folder` (String) The folder namespace to store the resource in. If not set will default to global Jenkins.
 - `namespace` (String) The Vault namespace to read the secret from.
 - `prefix_path` (String) The Vault mount prefix path to prepend to `path`.
