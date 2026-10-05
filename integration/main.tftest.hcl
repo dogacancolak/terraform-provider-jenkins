@@ -101,6 +101,38 @@ run "credentials" {
     error_message = "${output.vault_approle.namespace} data value did not match resource value"
   }
   assert {
+    condition     = output.vault_string.path == jenkins_credential_vault_string.global.path
+    error_message = "${output.vault_string.path} data value did not match resource value"
+  }
+  assert {
+    condition     = output.vault_string.vault_key == jenkins_credential_vault_string.global.vault_key
+    error_message = "${output.vault_string.vault_key} data value did not match resource value"
+  }
+  assert {
+    condition     = output.vault_file.file_name == jenkins_credential_vault_file.global.file_name
+    error_message = "${output.vault_file.file_name} data value did not match resource value"
+  }
+  assert {
+    condition     = output.vault_file.use_key == jenkins_credential_vault_file.global.use_key
+    error_message = "${output.vault_file.use_key} data value did not match resource value"
+  }
+  assert {
+    condition     = output.vault_ssh.username_key == jenkins_credential_vault_ssh.global.username_key
+    error_message = "${output.vault_ssh.username_key} data value did not match resource value"
+  }
+  assert {
+    condition     = output.vault_ssh.private_key_key == jenkins_credential_vault_ssh.global.private_key_key
+    error_message = "${output.vault_ssh.private_key_key} data value did not match resource value"
+  }
+  assert {
+    condition     = output.vault_username_password.username_key == jenkins_credential_vault_username_password.global.username_key
+    error_message = "${output.vault_username_password.username_key} data value did not match resource value"
+  }
+  assert {
+    condition     = output.vault_username_password.password_key == jenkins_credential_vault_username_password.global.password_key
+    error_message = "${output.vault_username_password.password_key} data value did not match resource value"
+  }
+  assert {
     condition     = output.aws_cred.access_key == jenkins_credential_aws.global.access_key
     error_message = "${nonsensitive(output.aws_cred.access_key)} data value did not match resource value"
   }
