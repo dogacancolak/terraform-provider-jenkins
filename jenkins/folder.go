@@ -3,7 +3,7 @@ package jenkins
 import (
 	"encoding/xml"
 	"fmt"
-	"strings"
+	"regexp"
 )
 
 type folder struct {
@@ -50,10 +50,11 @@ func (j *folder) Render() ([]byte, error) {
 	return xml.MarshalIndent(j, "", "\t")
 }
 
+// Go has no XML 1.1 support and rejects the declaration outright. Jenkins emits 1.1,
+// single-quoted on disk but double-quoted over the REST API, so match either form.
+// Safe as long as Jenkins uses no 1.1-only constructs.
+var xmlVersion11Declaration = regexp.MustCompile(`^(\s*<\?xml\s[^>]*?version=["'])1\.1(["'])`)
+
 func handleXml(def string) []byte {
-	// This is a horrible practice...but Go doesn't seem to have any mature
-	// support for the XML 1.1 specification. As long as Jenkins doesn't make
-	// use of any 1.1 additions then this should still parse.
-	def = strings.ReplaceAll(def, `<?xml version='1.1' encoding='UTF-8'?>`, `<?xml version='1.0' encoding='UTF-8'?>`)
-	return []byte(def)
+	return []byte(xmlVersion11Declaration.ReplaceAllString(def, "${1}1.0${2}"))
 }

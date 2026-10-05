@@ -282,3 +282,70 @@ func Test_folder_Render(t *testing.T) {
 		})
 	}
 }
+
+func Test_handleXml(t *testing.T) {
+	tests := []struct {
+		name string
+		def  string
+		want string
+	}{
+		{
+			name: "double-quoted-1.1",
+			def:  `<?xml version="1.1" encoding="UTF-8"?>` + "\n<folder/>",
+			want: `<?xml version="1.0" encoding="UTF-8"?>` + "\n<folder/>",
+		},
+		{
+			name: "single-quoted-1.1",
+			def:  `<?xml version='1.1' encoding='UTF-8'?>` + "\n<folder/>",
+			want: `<?xml version='1.0' encoding='UTF-8'?>` + "\n<folder/>",
+		},
+		{
+			name: "standalone-attribute-preserved",
+			def:  `<?xml version="1.1" encoding="UTF-8" standalone="yes"?><folder/>`,
+			want: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><folder/>`,
+		},
+		{
+			name: "already-1.0",
+			def:  `<?xml version="1.0" encoding="UTF-8"?><folder/>`,
+			want: `<?xml version="1.0" encoding="UTF-8"?><folder/>`,
+		},
+		{
+			name: "no-declaration",
+			def:  `<folder><description>none</description></folder>`,
+			want: `<folder><description>none</description></folder>`,
+		},
+		{
+			name: "body-is-not-rewritten",
+			def:  `<?xml version="1.0" encoding="UTF-8"?><folder><description>version="1.1"</description></folder>`,
+			want: `<?xml version="1.0" encoding="UTF-8"?><folder><description>version="1.1"</description></folder>`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := string(handleXml(tt.def)); got != tt.want {
+				t.Errorf("handleXml() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_parseFolder_xmlVersion11(t *testing.T) {
+	// Jenkins' REST API double-quotes the declaration it emits, unlike the
+	// single-quoted form written to disk.
+	def := `<?xml version="1.1" encoding="UTF-8"?>
+<com.cloudbees.hudson.plugins.folder.Folder>
+  <description>Example Description</description>
+  <properties/>
+  <folderViews/>
+  <healthMetrics/>
+</com.cloudbees.hudson.plugins.folder.Folder>`
+
+	got, err := parseFolder(def)
+	if err != nil {
+		t.Fatalf("parseFolder() error = %v", err)
+	}
+
+	if got.Description != "Example Description" {
+		t.Errorf("parseFolder() Description = %q, want %q", got.Description, "Example Description")
+	}
+}
